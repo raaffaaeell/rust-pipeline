@@ -5,6 +5,8 @@ mod annotation;
 mod cas;
 mod textengine;
 mod pipeline;
+#[macro_use] 
+extern crate lazy_static;
 
 fn main() {
     let regexeng = textengine::RegexAnalysisEngine();

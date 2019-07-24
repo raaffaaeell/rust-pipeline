@@ -2,7 +2,7 @@ use super::annotation::Annotation;
 use super::cas::Cas;
 use super::engine;
 use regex::Regex;
-use std::fs::{self, DirEntry};
+use std::fs::{self};
 use std::path::Path;
 use std::path::PathBuf;
 use walkdir::WalkDir;
@@ -21,9 +21,10 @@ pub struct SimpleDocumentReader {
 
 impl engine::Engine for AnalysisEngine {
     fn process(&self, cas: &mut Cas) {
-        let re = Regex::new(r"\d{2}").unwrap();
-        let textstring = cas.text.clone();
-        for cap in re.find_iter(textstring.as_str()) {
+        lazy_static! {
+            static ref RE:Regex = Regex::new(r"\d{2}").unwrap();
+        }
+        for cap in RE.find_iter(cas.text.to_owned().as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
             let annot = Annotation { begin, end };
@@ -33,9 +34,11 @@ impl engine::Engine for AnalysisEngine {
 }
 impl engine::Engine for RegexAnalysisEngine {
     fn process(&self, cas: &mut Cas) {
-        let re = Regex::new(r"\d{4}").unwrap();
-        let textstring = cas.text.clone();
-        for cap in re.find_iter(textstring.as_str()) {
+        lazy_static! {
+            static ref RE:Regex = Regex::new(r"\d{4}").unwrap();
+        }
+
+        for cap in RE.find_iter(cas.text.to_owned().as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
             let annot = Annotation { begin, end };
@@ -53,7 +56,7 @@ impl engine::Reader for SimpleDocumentReader {
         let pbuf = self.documents.get(self.document_index as usize).unwrap();
         let path = pbuf.as_path();
         if !path.is_dir() {
-            let text = fs::read_to_string(path).expect("erro ao ler arquivo");
+            let text = fs::read_to_string(path).unwrap();
             cas.text = text;
             self.document_index += 1;
         }
