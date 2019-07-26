@@ -12,7 +12,7 @@ pub struct PrintEngine {
 }
 pub struct Tokenizer();
 pub struct RegexEngine {
-    pub pattern: String,
+    pub pattern: Regex,
     pub annotation: String,
 }
 pub struct SimpleDocumentReader {
@@ -38,8 +38,7 @@ impl engine::Engine for Tokenizer {
 }
 impl engine::Engine for RegexEngine {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
-        let re: Regex = Regex::new(self.pattern.as_str()).unwrap();
-        for cap in re.find_iter(cas.text.to_owned().as_str()) {
+        for cap in self.pattern.find_iter(cas.text.to_owned().as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
             let annot = Annotation { begin, end };

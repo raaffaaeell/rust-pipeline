@@ -8,12 +8,14 @@ mod pipeline;
 mod textengine;
 #[macro_use]
 extern crate lazy_static;
+use regex::Regex;
 
 fn main() {
     let tokenizer = textengine::Tokenizer();
+    let re = Regex::new(r"\d").unwrap();
     let regexeng = textengine::RegexEngine {
         annotation: String::from("numero"),
-        pattern: String::from(r"\d"),
+        pattern: re,
     };
     let printeng = textengine::PrintEngine {
         annotation: String::from("numero"),
