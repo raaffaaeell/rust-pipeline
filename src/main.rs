@@ -1,29 +1,35 @@
-mod feature;
 mod engine;
+mod feature;
 use engine::Engine;
 mod annotation;
 mod cas;
-mod textengine;
+mod error;
 mod pipeline;
-#[macro_use] 
+mod textengine;
+#[macro_use]
 extern crate lazy_static;
 
 fn main() {
-    let regexeng = textengine::RegexAnalysisEngine();
-    let regexeng2 = textengine::AnalysisEngine();
+    let tokenizer = textengine::Tokenizer();
+    let regexeng = textengine::RegexEngine {
+        annotation: String::from("numero"),
+        pattern: String::from(r"\d"),
+    };
     let printeng = textengine::PrintEngine {
-        annotation: String::from("regex")
+        annotation: String::from("numero"),
     };
     let mut tengines: Vec<Box<Engine>> = Vec::new();
+    tengines.push(Box::new(tokenizer));
     tengines.push(Box::new(regexeng));
-    tengines.push(Box::new(regexeng2));
     tengines.push(Box::new(printeng));
     let mut reader = textengine::SimpleDocumentReader {
         documents: Vec::new(),
         input_dir: String::from("/home/rafael/rustspace/doctext"),
         document_index: 1,
-        documents_len: 0
+        documents_len: 0,
     };
-    pipeline::run(&mut reader, tengines);
-
+    match pipeline::run(&mut reader, tengines) {
+        Ok(()) => println!("Sucess"),
+        Err(e) => println!("Error {}", e),
+    }
 }
