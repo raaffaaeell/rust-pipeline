@@ -10,6 +10,7 @@ use walkdir::WalkDir;
 pub struct PrintEngine {
     pub annotation: String,
 }
+pub struct SentenceEngine();
 pub struct Tokenizer();
 pub struct RegexEngine {
     pub pattern: Regex,
@@ -22,28 +23,48 @@ pub struct SimpleDocumentReader {
     pub documents_len: u32,
 }
 
+impl engine::Engine for SentenceEngine {
+    fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
+        lazy_static! {
+            static ref RE: Regex = Regex::new(r"[^.!?]*[.!?]").unwrap();
+        }
+        let mut annotations:Vec<Annotation> =  Vec::new();
+        for cap in RE.find_iter(cas.text.as_str()) {
+            let begin = cap.start() as i32;
+            let end = cap.end() as i32;
+            let annot = Annotation { begin, end };
+            annotations.push(annot);
+        }
+        cas.insert_annotations("sentence", annotations);
+        Ok(())
+    }
+}
 impl engine::Engine for Tokenizer {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"\w+").unwrap();
         }
-        for cap in RE.find_iter(cas.text.to_owned().as_str()) {
+        let mut annotations:Vec<Annotation> =  Vec::new();
+        for cap in RE.find_iter(cas.text.as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
             let annot = Annotation { begin, end };
-            cas.insert_annotation("token", annot);
+            annotations.push(annot);
         }
+        cas.insert_annotations("token", annotations);
         Ok(())
     }
 }
 impl engine::Engine for RegexEngine {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
-        for cap in self.pattern.find_iter(cas.text.to_owned().as_str()) {
+        let mut annotations:Vec<Annotation> =  Vec::new();
+        for cap in self.pattern.find_iter(cas.text.as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
             let annot = Annotation { begin, end };
-            cas.insert_annotation(self.annotation.as_str(), annot);
+            annotations.push(annot);
         }
+        cas.insert_annotations(self.annotation.as_str(), annotations);
         Ok(())
     }
 }
@@ -58,8 +79,7 @@ impl engine::Reader for SimpleDocumentReader {
         if let Some(pbuf) = self.documents.get(self.document_index as usize) {
             let path = pbuf.as_path();
             if !path.is_dir() {
-                let text = fs::read_to_string(path)?;
-                cas.text = text;
+                cas.text = fs::read_to_string(path)?;
                 self.document_index += 1;
             }
         }

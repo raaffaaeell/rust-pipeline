@@ -52,4 +52,59 @@ impl Cas {
         }
         Ok(())
     }
+    pub fn get_covered_annotations(
+        &self,
+        annot_name: &str,
+    ) -> Result<HashMap<String, Vec<&Annotation>>, PipelineError> {
+        let mut covered_annotations: HashMap<String, Vec<&Annotation>> = HashMap::new();
+        if let Some(annot_cover) = self.annotations.get(annot_name) {
+            for annot in annot_cover {
+                let begin = annot.begin;
+                let end = annot.end;
+                for (name, annotations) in &self.annotations {
+                    if name != annot_name {
+                        for a in annotations {
+                            if a.begin >= begin && a.end <= end {
+                                covered_annotations
+                                    .entry(name.to_string())
+                                    .or_insert_with(|| Vec::new())
+                                    .push(a);
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            return Err(PipelineError::AnnotationMissing);
+        }
+
+        Ok(covered_annotations)
+    }
+    pub fn get_covered_annotations_by(
+        &self,
+        annot_name: &str,
+        annot_covered: &str,
+    ) -> Result<HashMap<String, Vec<&Annotation>>, PipelineError> {
+        let mut covered_annotations: HashMap<String, Vec<&Annotation>> = HashMap::new();
+        if let Some(annot_cover) = self.annotations.get(annot_name) {
+            for annot in annot_cover {
+                let begin = annot.begin;
+                let end = annot.end;
+                if let Some(annotations) = self.annotations.get(annot_covered) {
+                    for a in annotations {
+                        if a.begin >= begin && a.end <= end {
+                            covered_annotations
+                                .entry(annot_covered.to_string())
+                                .or_insert_with(|| Vec::new())
+                                .push(a);
+                        }
+                    }
+                }
+            }
+        } else {
+            return Err(PipelineError::AnnotationMissing);
+        }
+
+        Ok(covered_annotations)
+    }
 }
