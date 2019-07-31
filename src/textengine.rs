@@ -28,7 +28,7 @@ impl engine::Engine for SentenceEngine {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"[^.!?]*[.!?]").unwrap();
         }
-        let mut annotations:Vec<Annotation> =  Vec::new();
+        let mut annotations: Vec<Annotation> = Vec::new();
         for cap in RE.find_iter(cas.text.as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
@@ -44,7 +44,7 @@ impl engine::Engine for Tokenizer {
         lazy_static! {
             static ref RE: Regex = Regex::new(r"\w+").unwrap();
         }
-        let mut annotations:Vec<Annotation> =  Vec::new();
+        let mut annotations: Vec<Annotation> = Vec::new();
         for cap in RE.find_iter(cas.text.as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;
@@ -57,7 +57,7 @@ impl engine::Engine for Tokenizer {
 }
 impl engine::Engine for RegexEngine {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
-        let mut annotations:Vec<Annotation> =  Vec::new();
+        let mut annotations: Vec<Annotation> = Vec::new();
         for cap in self.pattern.find_iter(cas.text.as_str()) {
             let begin = cap.start() as i32;
             let end = cap.end() as i32;

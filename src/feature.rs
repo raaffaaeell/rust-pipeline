@@ -1,5 +1,4 @@
 pub struct Feature<T> {
     pub name: String,
-    pub value: T
+    pub value: T,
 }
-
