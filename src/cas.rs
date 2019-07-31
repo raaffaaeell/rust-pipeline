@@ -14,10 +14,12 @@ impl Cas {
             annotations: HashMap::new(),
         }
     }
+
     pub fn get_covered_text(self: &Self, begin: usize, end: usize) -> &str {
         let ref_text: &str = self.text.as_str();
         &ref_text[begin..end]
     }
+
     pub fn get_covered_text_safe(self: &Self, begin: usize, end: usize) -> Result<&str, String> {
         let len = self.text.len();
         if len < end {
@@ -30,12 +32,14 @@ impl Cas {
     pub fn insert_annotations(&mut self, name: &str, annotations: Vec<Annotation>) {
         self.annotations.insert(name.to_string(), annotations);
     }
+
     pub fn insert_annotation(&mut self, name: &str, annotation: Annotation) {
         self.annotations
             .entry(name.to_string())
             .or_insert_with(|| Vec::new())
             .push(annotation);
     }
+
     pub fn print_annotations(&self, name: &str) -> Result<(), PipelineError> {
         if let Some(annotations) = self.annotations.get(name) {
             for annot in annotations {
@@ -52,6 +56,7 @@ impl Cas {
         }
         Ok(())
     }
+
     pub fn get_covered_annotations(
         &self,
         annot_name: &str,
@@ -80,6 +85,7 @@ impl Cas {
 
         Ok(covered_annotations)
     }
+
     pub fn get_covered_annotations_by(
         &self,
         annot_name: &str,

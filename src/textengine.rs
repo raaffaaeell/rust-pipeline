@@ -2,6 +2,7 @@ use super::annotation::Annotation;
 use super::cas::Cas;
 use super::engine;
 use super::error::PipelineError;
+use lazy_static::lazy_static;
 use regex::Regex;
 use std::fs;
 use std::path::PathBuf;
@@ -10,12 +11,16 @@ use walkdir::WalkDir;
 pub struct PrintEngine {
     pub annotation: String,
 }
+
 pub struct SentenceEngine();
+
 pub struct Tokenizer();
+
 pub struct RegexEngine {
     pub pattern: Regex,
     pub annotation: String,
 }
+
 pub struct SimpleDocumentReader {
     pub documents: Vec<PathBuf>,
     pub input_dir: String,
@@ -39,6 +44,7 @@ impl engine::Engine for SentenceEngine {
         Ok(())
     }
 }
+
 impl engine::Engine for Tokenizer {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
         lazy_static! {
@@ -55,6 +61,7 @@ impl engine::Engine for Tokenizer {
         Ok(())
     }
 }
+
 impl engine::Engine for RegexEngine {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
         let mut annotations: Vec<Annotation> = Vec::new();
@@ -68,12 +75,14 @@ impl engine::Engine for RegexEngine {
         Ok(())
     }
 }
+
 impl engine::Engine for PrintEngine {
     fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
         cas.print_annotations(self.annotation.as_str())?;
         Ok(())
     }
 }
+
 impl engine::Reader for SimpleDocumentReader {
     fn execute(&mut self, cas: &mut Cas) -> Result<(), PipelineError> {
         if let Some(pbuf) = self.documents.get(self.document_index as usize) {
@@ -85,9 +94,11 @@ impl engine::Reader for SimpleDocumentReader {
         }
         Ok(())
     }
+
     fn has_next(&mut self) -> bool {
         self.document_index < self.documents_len
     }
+
     fn initialize(&mut self) -> Result<(), PipelineError> {
         for entry in WalkDir::new(self.input_dir.as_str())
             .into_iter()

@@ -1,14 +1,5 @@
-mod engine;
-mod feature;
-use engine::Engine;
-mod annotation;
-mod cas;
-mod error;
-mod pipeline;
-mod textengine;
-#[macro_use]
-extern crate lazy_static;
 use regex::Regex;
+use rust_pipeline::{engine::Engine, pipeline, textengine};
 
 fn main() {
     let tokenizer = textengine::Tokenizer();
@@ -21,7 +12,7 @@ fn main() {
     let printeng = textengine::PrintEngine {
         annotation: String::from("number"),
     };
-    let mut tengines: Vec<Box<Engine>> = Vec::new();
+    let mut tengines: Vec<Box<dyn Engine>> = Vec::new();
     tengines.push(Box::new(tokenizer));
     tengines.push(Box::new(sentence));
     tengines.push(Box::new(regexeng));
