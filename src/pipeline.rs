@@ -1,16 +1,10 @@
-use super::cas::Cas;
-use super::engine;
-use super::error::PipelineError;
+use crate::engine::{Engine, Reader};
+use crate::error::Result;
 
-pub fn run(
-    reader: &mut dyn engine::Reader,
-    engines: Vec<Box<engine::Engine>>,
-) -> Result<(), PipelineError> {
-    reader.initialize()?;
-    while reader.has_next() {
-        let mut cas = Cas::new();
-        reader.execute(&mut cas)?;
-        for engine in &engines {
+pub fn run<R: Reader>(reader: &mut R, engines: &[Box<dyn Engine>]) -> Result<()> {
+    while let Some(cas) = reader.next_cas() {
+        let mut cas = cas?;
+        for engine in engines {
             engine.process(&mut cas)?;
         }
     }

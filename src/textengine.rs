@@ -1,115 +1,132 @@
-use super::annotation::Annotation;
-use super::cas::Cas;
-use super::engine;
-use super::error::PipelineError;
+use std::path::{Path, PathBuf};
+
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::fs;
-use std::path::PathBuf;
 use walkdir::WalkDir;
 
+use crate::annotation::Annotation;
+use crate::cas::Cas;
+use crate::engine::{Engine, Reader};
+use crate::error::{PipelineError, Result};
+
+#[derive(Debug)]
 pub struct PrintEngine {
-    pub annotation: String,
+    annotation: String,
 }
 
-pub struct SentenceEngine();
+#[derive(Debug, Default)]
+pub struct SentenceEngine(());
 
-pub struct Tokenizer();
+#[derive(Debug, Default)]
+pub struct Tokenizer(());
 
+#[derive(Debug)]
 pub struct RegexEngine {
-    pub pattern: Regex,
-    pub annotation: String,
+    pattern: Regex,
+    annotation: String,
 }
 
+#[derive(Debug)]
 pub struct SimpleDocumentReader {
-    pub documents: Vec<PathBuf>,
-    pub input_dir: String,
-    pub document_index: u32,
-    pub documents_len: u32,
+    documents: std::vec::IntoIter<PathBuf>,
 }
 
-impl engine::Engine for SentenceEngine {
-    fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
+impl PrintEngine {
+    pub fn new(annotation: String) -> Self {
+        Self { annotation }
+    }
+}
+
+impl SentenceEngine {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Tokenizer {
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl RegexEngine {
+    pub fn new(pattern: Regex, annotation: String) -> Self {
+        Self {
+            pattern,
+            annotation,
+        }
+    }
+}
+
+impl Engine for SentenceEngine {
+    fn process(&self, cas: &mut Cas) -> Result<()> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"[^.!?]*[.!?]").unwrap();
+            static ref RE: RegexEngine =
+                RegexEngine::new(Regex::new(r"[^.!?]*[.!?]").unwrap(), "sentence".into());
         }
-        let mut annotations: Vec<Annotation> = Vec::new();
-        for cap in RE.find_iter(cas.text.as_str()) {
-            let begin = cap.start() as i32;
-            let end = cap.end() as i32;
-            let annot = Annotation { begin, end };
-            annotations.push(annot);
-        }
-        cas.insert_annotations("sentence", annotations);
-        Ok(())
+
+        RE.process(cas)
     }
 }
 
-impl engine::Engine for Tokenizer {
-    fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
+impl Engine for Tokenizer {
+    fn process(&self, cas: &mut Cas) -> Result<()> {
         lazy_static! {
-            static ref RE: Regex = Regex::new(r"\w+").unwrap();
+            static ref RE: RegexEngine =
+                RegexEngine::new(Regex::new(r"\w+").unwrap(), "token".into());
         }
-        let mut annotations: Vec<Annotation> = Vec::new();
-        for cap in RE.find_iter(cas.text.as_str()) {
-            let begin = cap.start() as i32;
-            let end = cap.end() as i32;
-            let annot = Annotation { begin, end };
-            annotations.push(annot);
-        }
-        cas.insert_annotations("token", annotations);
+
+        RE.process(cas)
+    }
+}
+
+impl Engine for RegexEngine {
+    fn process(&self, cas: &mut Cas) -> Result<()> {
+        let annotations: Vec<Annotation> = self
+            .pattern
+            .find_iter(cas.text())
+            .map(|cap| Annotation {
+                begin: cap.start(),
+                end: cap.end(),
+            })
+            .collect();
+
+        cas.set_annotations(self.annotation.clone(), annotations);
         Ok(())
     }
 }
 
-impl engine::Engine for RegexEngine {
-    fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
-        let mut annotations: Vec<Annotation> = Vec::new();
-        for cap in self.pattern.find_iter(cas.text.as_str()) {
-            let begin = cap.start() as i32;
-            let end = cap.end() as i32;
-            let annot = Annotation { begin, end };
-            annotations.push(annot);
-        }
-        cas.insert_annotations(self.annotation.as_str(), annotations);
-        Ok(())
+impl Engine for PrintEngine {
+    fn process(&self, cas: &mut Cas) -> Result<()> {
+        cas.print_annotations(&self.annotation)
     }
 }
 
-impl engine::Engine for PrintEngine {
-    fn process(&self, cas: &mut Cas) -> Result<(), PipelineError> {
-        cas.print_annotations(self.annotation.as_str())?;
-        Ok(())
+impl Reader for SimpleDocumentReader {
+    fn next_cas(&mut self) -> Option<Result<Cas>> {
+        self.documents.next().map(|path| {
+            std::fs::read_to_string(path)
+                .map(Cas::new)
+                .map_err(PipelineError::IoError)
+        })
     }
 }
 
-impl engine::Reader for SimpleDocumentReader {
-    fn execute(&mut self, cas: &mut Cas) -> Result<(), PipelineError> {
-        if let Some(pbuf) = self.documents.get(self.document_index as usize) {
-            let path = pbuf.as_path();
-            if !path.is_dir() {
-                cas.text = fs::read_to_string(path)?;
-                self.document_index += 1;
-            }
-        }
-        Ok(())
-    }
-
-    fn has_next(&mut self) -> bool {
-        self.document_index < self.documents_len
-    }
-
-    fn initialize(&mut self) -> Result<(), PipelineError> {
-        for entry in WalkDir::new(self.input_dir.as_str())
+impl SimpleDocumentReader {
+    pub fn new(input_dir: &Path) -> Result<Self> {
+        let documents: Vec<_> = WalkDir::new(input_dir)
             .into_iter()
             .filter_map(|e| e.ok())
-        {
-            self.documents.push(PathBuf::from(entry.path()));
-        }
-        if self.documents.is_empty() {
+            .map(|entry| entry.into_path())
+            .filter(|path| !path.is_dir())
+            .collect();
+
+        if documents.is_empty() {
             return Err(PipelineError::NoDocumentsFound);
         }
-        self.documents_len = self.documents.len() as u32;
-        Ok(())
+
+        Ok(Self {
+            documents: documents.into_iter(),
+        })
     }
 }

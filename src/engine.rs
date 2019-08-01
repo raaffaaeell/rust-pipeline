@@ -1,12 +1,10 @@
-use super::cas::Cas;
-use super::error::PipelineError;
+use crate::cas::Cas;
+use crate::error::Result;
 
 pub trait Engine {
-    fn process(&self, cas: &mut Cas) -> Result<(), PipelineError>;
+    fn process(&self, cas: &mut Cas) -> Result<()>;
 }
 
 pub trait Reader {
-    fn has_next(&mut self) -> bool;
-    fn execute(&mut self, cas: &mut Cas) -> Result<(), PipelineError>;
-    fn initialize(&mut self) -> Result<(), PipelineError>;
+    fn next_cas(&mut self) -> Option<Result<Cas>>;
 }
