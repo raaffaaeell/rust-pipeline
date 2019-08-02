@@ -1,4 +1,11 @@
+#[derive(Clone, Debug)]
 pub struct Annotation {
-    pub begin: i32,
-    pub end: i32,
+    pub begin: usize,
+    pub end: usize,
+}
+
+impl Annotation {
+    pub fn covers(&self, other: &Self) -> bool {
+        self.begin <= other.begin && other.end <= self.end
+    }
 }
